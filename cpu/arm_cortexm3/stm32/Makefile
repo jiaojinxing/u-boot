@@ -29,7 +29,73 @@ include $(TOPDIR)/config.mk
 
 LIB	= $(obj)lib$(SOC).a
 
-COBJS	:= clock.o cpu.o envm.o wdt.o fsmc.o
+COBJS	:= clock.o cpu.o envm.o wdt.o fsmc.o \
+Src/stm32f4xx_hal.o \
+Src/stm32f4xx_hal_adc.o \
+Src/stm32f4xx_hal_adc_ex.o \
+Src/stm32f4xx_hal_can.o \
+Src/stm32f4xx_hal_cec.o \
+Src/stm32f4xx_hal_cortex.o \
+Src/stm32f4xx_hal_crc.o \
+Src/stm32f4xx_hal_cryp.o \
+Src/stm32f4xx_hal_cryp_ex.o \
+Src/stm32f4xx_hal_dac.o \
+Src/stm32f4xx_hal_dac_ex.o \
+Src/stm32f4xx_hal_dcmi.o \
+Src/stm32f4xx_hal_dcmi_ex.o \
+Src/stm32f4xx_hal_dma.o \
+Src/stm32f4xx_hal_dma2d.o \
+Src/stm32f4xx_hal_dma_ex.o \
+Src/stm32f4xx_hal_eth.o \
+Src/stm32f4xx_hal_flash.o \
+Src/stm32f4xx_hal_flash_ex.o \
+Src/stm32f4xx_hal_flash_ramfunc.o \
+Src/stm32f4xx_hal_fmpi2c.o \
+Src/stm32f4xx_hal_fmpi2c_ex.o \
+Src/stm32f4xx_hal_gpio.o \
+Src/stm32f4xx_hal_hash.o \
+Src/stm32f4xx_hal_hash_ex.o \
+Src/stm32f4xx_hal_hcd.o \
+Src/stm32f4xx_hal_i2c.o \
+Src/stm32f4xx_hal_i2c_ex.o \
+Src/stm32f4xx_hal_i2s.o \
+Src/stm32f4xx_hal_i2s_ex.o \
+Src/stm32f4xx_hal_irda.o \
+Src/stm32f4xx_hal_iwdg.o \
+Src/stm32f4xx_hal_ltdc.o \
+Src/stm32f4xx_hal_msp_template.o \
+Src/stm32f4xx_hal_nand.o \
+Src/stm32f4xx_hal_nor.o \
+Src/stm32f4xx_hal_pccard.o \
+Src/stm32f4xx_hal_pcd.o \
+Src/stm32f4xx_hal_pcd_ex.o \
+Src/stm32f4xx_hal_pwr.o \
+Src/stm32f4xx_hal_pwr_ex.o \
+Src/stm32f4xx_hal_qspi.o \
+Src/stm32f4xx_hal_rcc.o \
+Src/stm32f4xx_hal_rcc_ex.o \
+Src/stm32f4xx_hal_rng.o \
+Src/stm32f4xx_hal_rtc.o \
+Src/stm32f4xx_hal_rtc_ex.o \
+Src/stm32f4xx_hal_sai.o \
+Src/stm32f4xx_hal_sai_ex.o \
+Src/stm32f4xx_hal_sd.o \
+Src/stm32f4xx_hal_sdram.o \
+Src/stm32f4xx_hal_smartcard.o \
+Src/stm32f4xx_hal_spdifrx.o \
+Src/stm32f4xx_hal_spi.o \
+Src/stm32f4xx_hal_sram.o \
+Src/stm32f4xx_hal_tim.o \
+Src/stm32f4xx_hal_tim_ex.o \
+Src/stm32f4xx_hal_uart.o \
+Src/stm32f4xx_hal_usart.o \
+Src/stm32f4xx_hal_wwdg.o \
+Src/stm32f4xx_ll_fmc.o \
+Src/stm32f4xx_ll_fsmc.o \
+Src/stm32f4xx_ll_sdmmc.o \
+Src/stm32f4xx_ll_usb.o \
+Src/system_stm32f4xx.o
+
 ifeq ($(CONFIG_CMD_BUFCOPY),y)
 COBJS	+= cmd_bufcopy.o
 endif

@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 #include <common.h>
+#include <asm/arch/Inc/stm32f4xx_hal.h>
 
 /* Internal tick units */
 static unsigned long long timestamp;	/* Monotonic incrementing timer */
@@ -24,6 +25,7 @@ static ulong              lastdec;	/* Last decrementer snapshot */
 
 int timer_init()
 {
+#if 0
 	volatile struct cm3_systick *systick =
 		(volatile struct cm3_systick *)CM3_SYSTICK_BASE;
 
@@ -37,14 +39,17 @@ int timer_init()
 	/* Use external clock, no ints */
 	systick->ctrl = CM3_SYSTICK_CTRL_EN;
 #endif
-
 	timestamp = 0;
+#else
+	timestamp = 0;
+#endif
 
 	return 0;
 }
 
 ulong get_timer(ulong base)
 {
+#if 0
 	volatile struct cm3_systick *systick =
 		(volatile struct cm3_systick *)CM3_SYSTICK_BASE;
 	ulong now = systick->val;
@@ -57,19 +62,30 @@ ulong get_timer(ulong base)
 	lastdec = now;
 
 	return timestamp / (clock_get(CLOCK_SYSTICK) / CONFIG_SYS_HZ) - base;
+#else
+	lastdec = HAL_GetTick();
+
+	return HAL_GetTick() - base;
+#endif
 }
 
 void reset_timer(void)
 {
+#if 0
 	volatile struct cm3_systick *systick =
 		(volatile struct cm3_systick *)(CM3_SYSTICK_BASE);
 	lastdec = systick->val;
 	timestamp = 0;
+#else
+	lastdec = HAL_GetTick();
+	timestamp = 0;
+#endif
 }
 
 /* delay x useconds */
 void __udelay(ulong usec)
 {
+#if 0
 	ulong clc, tmp;
 	volatile struct cm3_systick *systick =
 		(volatile struct cm3_systick *)(CM3_SYSTICK_BASE);
@@ -94,6 +110,10 @@ void __udelay(ulong usec)
 	} else {
 		while (systick->val > (tmp - clc) && systick->val <= tmp) ;
 	}
+#else
+	ulong tmp = usec/1000;
+	HAL_Delay(tmp ? tmp : 1);
+#endif
 }
 
 /*

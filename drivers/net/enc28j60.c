@@ -263,9 +263,6 @@
 #define ENC_PHID2_MASK	0xFC00
 
 
-#define ENC_SPI_SLAVE_CS 0x00010000	/* pin P1.16 */
-#define ENC_RESET	 0x00020000	/* pin P1.17 */
-
 #define FAILSAFE_VALUE 5000
 
 /*
@@ -284,8 +281,8 @@
 /* maximum frame length */
 #define ENC_MAX_FRM_LEN 1518
 
-#define enc_enable() PUT32(IO1CLR, ENC_SPI_SLAVE_CS)
-#define enc_disable() PUT32(IO1SET, ENC_SPI_SLAVE_CS)
+#define enc_enable()  spi_select(ENC28J60_CS)
+#define enc_disable() spi_deselect(ENC28J60_CS)
 #define enc_cfg_spi() spi_set_cfg(0, 0, 0); spi_set_clock(8);
 
 
@@ -331,14 +328,6 @@ int eth_init (bd_t * bis)
 {
 	unsigned char estatVal;
 	uchar enetaddr[6];
-
-	/* configure GPIO */
-	(*((volatile unsigned long *) IO1DIR)) |= ENC_SPI_SLAVE_CS;
-	(*((volatile unsigned long *) IO1DIR)) |= ENC_RESET;
-
-	/* CS and RESET active low */
-	PUT32 (IO1SET, ENC_SPI_SLAVE_CS);
-	PUT32 (IO1SET, ENC_RESET);
 
 	spi_init ();
 

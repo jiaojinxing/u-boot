@@ -172,9 +172,8 @@
 /*
  * Ethernet configuration
  */
-#define CONFIG_NET_MULTI
-#define CONFIG_STM32_ETH
-#define CONFIG_STM32_ETH_RMII
+#define CONFIG_ENC28J60
+#define CONFIG_CMD_PING
 
 /*
  * Ethernet RX buffers are malloced from the internal SRAM (more precisely,
@@ -254,14 +253,11 @@
 #define CONFIG_BOOTCOMMAND		"run envmboot"
 
 #define CONFIG_HOSTNAME	stm-disco
-#define CONFIG_BOOTARGS	"stm32_platform=stm-disco "\
-				"console=ttyS0,115200 panic=10"
-#define LOADADDR		"0xD0007FC0"
+#define CONFIG_BOOTARGS	""
+#define LOADADDR		"0xD0000000"
 
 #define REV_EXTRA_ENV		\
-	"envmboot=run addip;bootm ${envmaddr}\0"			\
-	"update=tftp ${image};"					\
-		"cptf ${envmaddr} ${loadaddr} ${filesize}\0"
+	"envmboot=tftp;go ${loadaddr}\0"
 
 #define CONFIG_SYS_CONSOLE_IS_IN_ENV
 
@@ -270,14 +266,11 @@
  */
 #define CONFIG_EXTRA_ENV_SETTINGS				\
 	"loadaddr=" LOADADDR "\0"				\
-	"addip=setenv bootargs ${bootargs} ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}:${hostname}:eth0:off\0"				\
-	"envmaddr=08040000\0"					\
 	"ethaddr=C0:B1:3C:88:88:85\0"				\
-	"ipaddr=172.17.4.206\0"					\
-	"serverip=172.17.0.1\0"					\
-	"image=stm32f429/uImage\0"				\
+	"ipaddr=192.168.1.11\0"					\
+	"serverip=192.168.1.10\0"				\
+	"bootfile=bspstm32f4.bin\0"				\
 	"stdin=serial\0"					\
-	"netboot=tftp ${image};run addip;bootm\0"		\
 	REV_EXTRA_ENV
 
 /*

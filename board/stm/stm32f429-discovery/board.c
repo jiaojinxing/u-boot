@@ -30,6 +30,11 @@
 #include <netdev.h>
 #include <ili932x.h>
 
+#define STM32F429xx 1
+#include <asm/arch/Inc/stm32f4xx_hal.h>
+#include "stm32f429i_discovery.h"
+#undef FMC_SDSR_BUSY
+
 #include <asm/arch/stm32.h>
 #include <asm/arch/stm32f2_gpio.h>
 
@@ -39,6 +44,9 @@
 #include <asm/system.h>
 
 #include <asm/arch/fsmc.h>
+
+#include <asm/arch/hardware.h>
+#include <asm/arch/spi.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -146,12 +154,96 @@ out:
 	return rv;
 }
 
+/**
+  * @brief  System Clock Configuration
+  *         The system Clock is configured as follow : 
+  *            System Clock source            = PLL (HSE)
+  *            SYSCLK(Hz)                     = 180000000
+  *            HCLK(Hz)                       = 180000000
+  *            AHB Prescaler                  = 1
+  *            APB1 Prescaler                 = 4
+  *            APB2 Prescaler                 = 2
+  *            HSE Frequency(Hz)              = 8000000
+  *            PLL_M                          = 8
+  *            PLL_N                          = 360
+  *            PLL_P                          = 2
+  *            PLL_Q                          = 7
+  *            VDD(V)                         = 3.3
+  *            Main regulator output voltage  = Scale1 mode
+  *            Flash Latency(WS)              = 5
+  * @param  None
+  * @retval None
+  */
+static void SystemClock_Config(void)
+{
+  RCC_ClkInitTypeDef RCC_ClkInitStruct;
+  RCC_OscInitTypeDef RCC_OscInitStruct;
+
+  /* Enable Power Control clock */
+  __HAL_RCC_PWR_CLK_ENABLE();
+  
+  /* The voltage scaling allows optimizing the power consumption when the device is 
+     clocked below the maximum system frequency, to update the voltage scaling value 
+     regarding system frequency refer to product datasheet.  */
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+  
+  /* Enable HSE Oscillator and activate PLL with HSE as source */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 360;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 7;
+  HAL_RCC_OscConfig(&RCC_OscInitStruct);
+
+  /* Activate the Over-Drive mode */
+  HAL_PWREx_EnableOverDrive();
+ 
+  /* Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2 
+     clocks dividers */
+  RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;  
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;  
+  HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5);
+}
+
+/**
+  * @brief  This function handles SysTick Handler.
+  * @param  None
+  * @retval None
+  */
+void __attribute__((naked, noreturn))
+	SysTick_Handler(void);
+void SysTick_Handler(void)
+{
+  HAL_IncTick();
+}
+
 /*
  * Early hardware init.
  */
 int board_init(void)
 {
 	int rv;
+
+	SystemInit();
+
+  	/* STM32F4xx HAL library initialization:
+         - Configure the Flash prefetch, instruction and Data caches
+         - Configure the Systick to generate an interrupt each 1 msec
+         - Set NVIC Group Priority to 4
+         - Global MSP (MCU Support Package) initialization
+         */
+  	HAL_Init();
+
+  	/* Configure the system clock to 180 MHz */
+  	SystemClock_Config();
+
+	__enable_irq();
 
 	rv = fmc_fsmc_setup_gpio();
 	if (rv)
@@ -324,6 +416,188 @@ int dram_init(void)
 int board_eth_init(bd_t *bis)
 {
 	return stm32_eth_init(bis);
+}
+#elif defined(CONFIG_ENC28J60)
+/*
+ * Register ethernet driver
+ */
+int board_eth_init(bd_t *bis)
+{
+	return eth_init(bis);
+}
+#endif
+
+#if 1
+
+static SPI_HandleTypeDef    SpiHandle;
+static uint32_t SpixTimeout = SPIx_TIMEOUT_MAX;    /*<! Value of Timeout when SPI communication fails */
+
+static void     SPIx_Init(void);
+static void     SPIx_MspInit(void);
+static uint8_t  SPIx_WriteRead(uint8_t Byte);
+static  void    SPIx_Error(void);
+
+#define DISCOVERY_ENC28J60_SPIx                          SPI1
+#define DISCOVERY_ENC28J60_SPIx_CLK_ENABLE()             __SPI1_CLK_ENABLE()
+#define DISCOVERY_ENC28J60_SPIx_GPIO_PORT                GPIOA                      /* GPIOA */
+#define DISCOVERY_ENC28J60_SPIx_AF                       GPIO_AF5_SPI1
+#define DISCOVERY_ENC28J60_SPIx_GPIO_CLK_ENABLE()        __GPIOA_CLK_ENABLE()
+#define DISCOVERY_ENC28J60_SPIx_GPIO_CLK_DISABLE()       __GPIOA_CLK_DISABLE()
+#define DISCOVERY_ENC28J60_SPIx_SCK_PIN                  GPIO_PIN_5                 /* PA.05 */
+#define DISCOVERY_ENC28J60_SPIx_MISO_PIN                 GPIO_PIN_6                 /* PA.06 */
+#define DISCOVERY_ENC28J60_SPIx_MOSI_PIN                 GPIO_PIN_7                 /* PA.07 */
+
+/**
+  * @brief  SPIx Bus initialization
+  * @param  None
+  * @retval None
+  */
+static void SPIx_Init(void)
+{
+  if(HAL_SPI_GetState(&SpiHandle) == HAL_SPI_STATE_RESET)
+  {
+    /* SPI configuration -----------------------------------------------------*/
+    SpiHandle.Instance = DISCOVERY_ENC28J60_SPIx;
+    SpiHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
+    SpiHandle.Init.Direction = SPI_DIRECTION_2LINES;
+    SpiHandle.Init.CLKPhase = SPI_PHASE_1EDGE;
+    SpiHandle.Init.CLKPolarity = SPI_POLARITY_LOW;
+    SpiHandle.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLED;
+    SpiHandle.Init.CRCPolynomial = 7;
+    SpiHandle.Init.DataSize = SPI_DATASIZE_8BIT;
+    SpiHandle.Init.FirstBit = SPI_FIRSTBIT_MSB;
+    SpiHandle.Init.NSS = SPI_NSS_SOFT;
+    SpiHandle.Init.TIMode = SPI_TIMODE_DISABLED;
+    SpiHandle.Init.Mode = SPI_MODE_MASTER;
+
+    SPIx_MspInit();
+    HAL_SPI_Init(&SpiHandle);
+  }
+}
+
+/**
+  * @brief  Sends a Byte through the SPI interface and return the Byte received 
+  *         from the SPI bus.
+  * @param  Byte: Byte send.
+  * @retval The received byte value
+  */
+static uint8_t SPIx_WriteRead(uint8_t Byte)
+{
+  uint8_t receivedbyte = 0;
+  
+  /* Send a Byte through the SPI peripheral */
+  /* Read byte from the SPI bus */
+  if(HAL_SPI_TransmitReceive(&SpiHandle, (uint8_t*) &Byte, (uint8_t*) &receivedbyte, 1, SpixTimeout) != HAL_OK)
+  {
+    SPIx_Error();
+  }
+  
+  return receivedbyte;
+}
+
+/**
+  * @brief  SPIx error treatment function.
+  * @param  None
+  * @retval None
+  */
+static void SPIx_Error(void)
+{
+  /* De-initialize the SPI communication bus */
+  HAL_SPI_DeInit(&SpiHandle);
+  
+  /* Re-Initialize the SPI communication bus */
+  SPIx_Init();
+}
+
+/**
+  * @brief  SPI MSP Init.
+  * @param  hspi: SPI handle
+  * @retval None
+  */
+static void SPIx_MspInit(void)
+{
+  GPIO_InitTypeDef   GPIO_InitStructure;
+
+  /* Enable the SPI peripheral */
+  DISCOVERY_ENC28J60_SPIx_CLK_ENABLE();
+  
+  /* Enable SCK, MOSI and MISO GPIO clocks */
+  DISCOVERY_ENC28J60_SPIx_GPIO_CLK_ENABLE();
+  
+  /* SPI SCK, MOSI, MISO pin configuration */
+  GPIO_InitStructure.Pin = (DISCOVERY_ENC28J60_SPIx_SCK_PIN | DISCOVERY_ENC28J60_SPIx_MISO_PIN | DISCOVERY_ENC28J60_SPIx_MOSI_PIN);
+  GPIO_InitStructure.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStructure.Pull  = GPIO_PULLDOWN;
+  GPIO_InitStructure.Speed = GPIO_SPEED_MEDIUM;
+  GPIO_InitStructure.Alternate = DISCOVERY_ENC28J60_SPIx_AF;
+  HAL_GPIO_Init(DISCOVERY_ENC28J60_SPIx_GPIO_PORT, &GPIO_InitStructure);
+}
+
+#define DISCOVERY_ENC28J60_CS_PIN                        GPIO_PIN_4                 /* PA.04 */
+#define DISCOVERY_ENC28J60_CS_GPIO_PORT                  GPIOA                      /* GPIOA */
+#define DISCOVERY_ENC28J60_CS_GPIO_CLK_ENABLE()          __GPIOA_CLK_ENABLE()
+#define DISCOVERY_ENC28J60_CS_GPIO_CLK_DISABLE()         __GPIOA_CLK_DISABLE()
+
+#define DISCOVERY_ENC28J60_CS_LOW()       HAL_GPIO_WritePin(DISCOVERY_ENC28J60_CS_GPIO_PORT, DISCOVERY_ENC28J60_CS_PIN, GPIO_PIN_RESET)
+#define DISCOVERY_ENC28J60_CS_HIGH()      HAL_GPIO_WritePin(DISCOVERY_ENC28J60_CS_GPIO_PORT, DISCOVERY_ENC28J60_CS_PIN, GPIO_PIN_SET)
+
+int spi_init(void)
+{
+	GPIO_InitTypeDef GPIO_InitStructure;
+	  
+	/* Configure the enc28j60 Control pins --------------------------------*/
+	/* Enable CS GPIO clock and configure GPIO pin for enc28j60 Chip select */  
+	DISCOVERY_ENC28J60_CS_GPIO_CLK_ENABLE();
+	  
+	/* Configure GPIO PIN for LIS Chip select */
+	GPIO_InitStructure.Pin = DISCOVERY_ENC28J60_CS_PIN;
+	GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStructure.Pull  = GPIO_NOPULL;
+	GPIO_InitStructure.Speed = GPIO_SPEED_HIGH;
+	HAL_GPIO_Init(DISCOVERY_ENC28J60_CS_GPIO_PORT, &GPIO_InitStructure);
+	  
+	/* Deselect: Chip Select high */
+	DISCOVERY_ENC28J60_CS_HIGH();
+	  
+ 	SPIx_Init();
+
+	return 0;
+}
+
+void spi_select(int cs)
+{
+	if (cs == ENC28J60_CS) {
+		DISCOVERY_ENC28J60_CS_LOW();
+	}
+}
+
+void spi_deselect(int cs)
+{
+	if (cs == ENC28J60_CS) {
+		DISCOVERY_ENC28J60_CS_HIGH();
+	}
+}
+
+unsigned char spi_read(void)
+{
+	return SPIx_WriteRead(0);
+}
+
+void spi_write(unsigned char b)
+{
+	SPIx_WriteRead(b);
+}
+
+void spi_set_clock(unsigned char clk_value)
+{
+
+}
+
+void spi_set_cfg(unsigned char phase,
+		 unsigned char polarity,
+		 unsigned char lsbf)
+{
+
 }
 #endif
 

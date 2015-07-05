@@ -74,6 +74,8 @@ static inline void __attribute__((used)) __disable_irq(void)
 	asm volatile ("cpsid i");
 }
 
+extern void SysTick_Handler(void);
+
 /*
  * Exception-processing vectors:
  */
@@ -93,7 +95,11 @@ unsigned int vectors[] __attribute__((section(".vectors"))) = {
 	/*
 	 * Other exceptions
 	 */
-	[2 ... 165]	= (unsigned int)&default_isr
+	[2 ... 14]	= (unsigned int)&default_isr,
+
+	[15]		= (unsigned int)&SysTick_Handler,
+
+	[16 ... 165]	= (unsigned int)&default_isr
 };
 
 #ifdef CONFIG_LPC18XX_NORFLASH_BOOTSTRAP_WORKAROUND

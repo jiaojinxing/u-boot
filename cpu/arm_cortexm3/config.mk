@@ -35,5 +35,7 @@ endif
 
 PLATFORM_CPPFLAGS += -I$(TOPDIR)/cpu/$(CPU)
 
+PLATFORM_CPPFLAGS += -DSTM32F429xx=1 -I$(TOPDIR)/include/asm/arch/Inc
+
 PLATFORM_RELFLAGS += -g2 -mthumb -mcpu=cortex-m3 -fsigned-char -O2 -fno-builtin-puts -fno-common -ffixed-r8
 
